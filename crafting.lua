@@ -76,7 +76,51 @@ function colonyCategorizeRequests(colony)
         
 
         -- Equipment Categorization
-        if itemIsEquipment then
+
+        if string.find(target, "Builder", 1, true) then
+            if isDomumOrnamentumItem then
+                local blockType = removeNamespace(item_name_raw)
+                local textureData = nbtToStore["textureData"]
+                local textureDataSize = 0
+                if type(textureData) == "table" then
+                    for _ in pairs(textureData) do textureDataSize = textureDataSize + 1 end
+                end
+                if textureDataSize == 1 and nbtToStore and nbtToStore.type then
+                    local singleMaterial = "UnknownMaterial"
+                    if type(textureData) == "table" then 
+                        for _, mat_val in pairs(textureData) do 
+                            singleMaterial = removeNamespace(tostring(mat_val));
+                            break
+                         end
+                    local style = tostring(nbtToStore.type):gsub("_", " ") :gsub("^%l", string.upper):gsub("%s%l", function(c) return string.upper(c) end)
+                    itemEntry.name = string.format("%s (%s, %s)", item_displayName, style, singleMaterial)
+                end
+                elseif textureDataSize == 2 and nbtToStore then
+                    local materialsExtracted = {}
+                    if type(textureData) == "table" then
+                        local matKeys = {}
+                        for matkey in pairs(textureData) do table.insert(matKeys, matkey) end
+                        if matKeys[1] then table.insert(materialsExtracted, removeNamespace(tostring(textureData[matKeys[1]]))) end
+                        if matKeys[2] then table.insert(materialsExtracted, removeNamespace(tostring(textureData[matKeys[2]]))) end
+                    end
+                    if #materialsExtracted == 2 then
+                        itemEntry.name = string.format("%s (%s, %s, %s)", item_displayName, blockType, materialsExtracted[1], materialsExtracted[2] )
+                    else
+                        itemEntry.name = string.format("%s (%s, MaterialsErr)", item_displayName, blockType)
+                        logToFile("Domum 2-mat block " .. item_displayName .. " issue extracting 2 materials.", "WARN_")
+                    end
+                else
+                    itemEntry.name = string.format("%s (%s, NBT_Err)", item_displayName, blockType) 
+                    logToFile("Unhandled Domum block: " .. item_displayName .. " textureDataSize: " .. textureDataSize .. " NBT: " .. tableToString(nbtToStore or {}), "WARN_")
+
+                end  
+                table.insert(domum_list, itemEntry)
+            else
+                itemEntry.name = name_from_req 
+                table.insert(builder_list, itemEntry)
+            end
+         
+        elseif itemIsEquipment then
             local levelTable = {
                 ["and with maximal level: Leather"] = "Leather",
                 ["and with maximal level: Stone"] = "Stone",
@@ -88,66 +132,38 @@ function colonyCategorizeRequests(colony)
                 ["with maximal level: Wood or Gold"] = "Wood or Gold"
             }
 
-            local level = "Any Level"
+            local extractedLevel = "Any Level"
 
             for pattern, mappedLevel in pairs(levelTable) do
                 if string.find(desc, pattern) then
-                    level = mappedLevel
+                    extractedLevel = mappedLevel
                     break
                 end
             end
 
-            local new_name = level .. " " .. name
+            if extractedLevel == "Any Level" then 
+                if string.find(desc, "Diamond") then extractedLevel = "Diamond"
+                elseif string.find(desc, "Iron") then extractedLevel = "Iron"
+                elseif string.find(desc, "Chain") then extractedLevel = "Chain"
+                elseif string.find(desc, "Stone") then extractedLevel = "Stone" 
+                elseif string.find(desc, "Gold") then extractedLevel = "Gold"
+                elseif string.find(desc, "Leather") then extractedLevel = "Leather"
+                elseif string.find(desc, "Wood") then extractedLevel = "Wood"
+                end
+            end
 
-            table.insert(equipment_list, {
-                name = new_name,
-                target = target,
-                count = count,
-                item_displayName = item_displayName,
-                item_name = item_name,
-                desc = desc,
-                provided = 0,
-                isCraftable = false,
-                equipment = itemIsEquipment,
-                displayColor = colors.white,
-                level = level
-            })
+            itemEntry.level = extractedLevel 
+            itemEntry.name = extractedLevel .. " " .. name_from_req
 
-            -- Builder Categorization
-        elseif string.find(target, "Builder") then
-            table.insert(builder_list, {
-                name = name,
-                target = target,
-                count = count,
-                item_displayName = item_displayName,
-                item_name = item_name,
-                desc = desc,
-                provided = 0,
-                isCraftable = false,
-                equipment = itemIsEquipment,
-                displayColor = colors.white,
-                level = ""
-            })
+            table.insert(equipment_list, itemEntry)
 
-            -- Non-Builder Categorization
-        else
-            table.insert(others_list, {
-                name = name,
-                target = target,
-                count = count,
-                item_displayName = item_displayName,
-                item_name = item_name,
-                desc = desc,
-                provided = 0,
-                isCraftable = false,
-                equipment = itemIsEquipment,
-                displayColor = colors.white,
-                level = ""
-            })
-        
+            else
+            itemEntry.name = name_from_req 
+            table.insert(others_list, itemEntry)
         end
+
         ::continue_categorize_loop::
     end
 
-    return equipment_list, builder_list, others_list
+    return equipment_list, builder_list, domum_list, others_list
 end
