@@ -1,7 +1,7 @@
 
 local VERSION = 1.15
 local debug = false
-
+local crafting = false
 
 local Logo = require "artLogo"
 local artLogo = Logo.artLogo
