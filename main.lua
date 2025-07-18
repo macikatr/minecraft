@@ -1,5 +1,5 @@
 
-local VERSION = 1.15
+local VERSION = 1.21
 local debug = false
 local crafting = false
 
@@ -11,12 +11,12 @@ local resetDefault = config.resetDefault
 local drawLoadingBar = config.drawLoadingBar
 local monitorShowDashboard = config.monitorShowDashboard
 
-local handling = require "handling"
-local getPeripheral = handling.getPeripheral
-local logToFile = handling.logToFile
-local getStorageBridge = handling.getStorageBridge
-local autodetectStorage = handling.autodetectStorage
-local checkMonitorSize = handling.checkMonitorSize
+local helpers = require "helpers"
+local getPeripheral = helpers.getPeripheral
+local logToFile = helpers.logToFile
+local getStorageBridge = helpers.getStorageBridge
+local autodetectStorage = helpers.autodetectStorage
+local checkMonitorSize = helpers.checkMonitorSize
 
 
 
@@ -528,6 +528,7 @@ local function detectQuantityField(itemName)
 end
 
 function storageSystemHandleRequests(request_list)
+
     -- Add items that should not be crafted or send to the Warehouse
     local skip_items = {
         "minecraft:enchanted_book",
@@ -646,119 +647,15 @@ end
 
 
 
-----------------------------------------------------------------------------
---* REQUEST HANDLING
-----------------------------------------------------------------------------
-local function isEquipment(desc)
-    local equipmentKeywords = { "Sword ", "Bow ", "Pickaxe ", "Axe ", "Shovel ", "Hoe ", "Shears ", "Helmet ",
-        "Chestplate ", "Leggings ", "Boots ", "Shield" }
-
-    for _, keyword in ipairs(equipmentKeywords) do
-        if string.find(desc, keyword) then
-            return true
-        end
-    end
-    return false
-end
-
-function colonyCategorizeRequests()
-    local equipment_list = {}
-    local builder_list = {}
-    local others_list = {}
-
-    for _, req in ipairs(colony.getRequests()) do
-        local name = req.name
-        local target = req.target or ""
-        local desc = req.desc or ""
-        local count = req.count
-        local item_displayName = trimLeadingWhitespace(req.items[1].displayName)
-        local item_name = req.items[1].name
-        local itemIsEquipment = isEquipment(desc)
-
-
-        -- Equipment Categorization
-        if itemIsEquipment then
-            local levelTable = {
-                ["and with maximal level: Leather"] = "Leather",
-                ["and with maximal level: Stone"] = "Stone",
-                ["and with maximal level: Chain"] = "Chain",
-                ["and with maximal level: Gold"] = "Gold",
-                ["and with maximal level: Iron"] = "Iron",
-                ["and with maximal level: Diamond"] = "Diamond",
-
-                ["with maximal level: Wood or Gold"] = "Wood or Gold"
-            }
-
-            local level = "Any Level"
-
-            for pattern, mappedLevel in pairs(levelTable) do
-                if string.find(desc, pattern) then
-                    level = mappedLevel
-                    break
-                end
-            end
-
-            local new_name = level .. " " .. name
-
-            table.insert(equipment_list, {
-                name = new_name,
-                target = target,
-                count = count,
-                item_displayName = item_displayName,
-                item_name = item_name,
-                desc = desc,
-                provided = 0,
-                isCraftable = false,
-                equipment = itemIsEquipment,
-                displayColor = colors.white,
-                level = level
-            })
-
-            -- Builder Categorization
-        elseif string.find(target, "Builder") then
-            table.insert(builder_list, {
-                name = name,
-                target = target,
-                count = count,
-                item_displayName = item_displayName,
-                item_name = item_name,
-                desc = desc,
-                provided = 0,
-                isCraftable = false,
-                equipment = itemIsEquipment,
-                displayColor = colors.white,
-                level = ""
-            })
-
-            -- Non-Builder Categorization
-        else
-            table.insert(others_list, {
-                name = name,
-                target = target,
-                count = count,
-                item_displayName = item_displayName,
-                item_name = item_name,
-                desc = desc,
-                provided = 0,
-                isCraftable = false,
-                equipment = itemIsEquipment,
-                displayColor = colors.white,
-                level = ""
-            })
-        end
-    end
-
-    return equipment_list, builder_list, others_list
-end
 
 
 
 function requestAndFulfill()
-    local equipment_list, builder_list, others_list
+    local equipment_list, builder_list, domum_list, others_list
 
     while true do
         local success, err = pcall(function()
-            equipment_list, builder_list, others_list = colonyCategorizeRequests()
+            equipment_list, builder_list, domum_list, others_list = colonyCategorizeRequests(colony)
         end)
 
         if success then
@@ -770,16 +667,18 @@ function requestAndFulfill()
     end
 
     -- writeToLogFile("log1.txt", equipment_list, builder_list, others_list)
-    --[[
-    storageSystemHandleRequests(equipment_list)
+    if crafting and bridge and storage then
+        storageSystemHandleRequests(equipment_list)
 
-    storageSystemHandleRequests(builder_list)
+        storageSystemHandleRequests(builder_list)
 
-    storageSystemHandleRequests(others_list)
-    --]]
+        storageSystemHandleRequests(domum_list)
+
+        storageSystemHandleRequests(others_list)
+    end
     -- writeToLogFile("log2.txt", equipment_list, builder_list, others_list)
 
-    return equipment_list, builder_list, others_list
+    return equipment_list, builder_list, domum_list, others_list
 end
 
 

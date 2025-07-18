@@ -285,5 +285,20 @@ function autodetectStorage()
     return nil
 end
 
+function removeNamespace(itemName)
+    if type(itemName) ~= "string" then return tostring(itemName) end
+    local colonIndex = string.find(itemName, ":")
+    if colonIndex then
+        return string.sub(itemName, colonIndex + 1)
+    end
+    return itemName
+end
 
-return { logToFile = logToFile, getPeripheral = getPeripheral, getStorageBridge = getStorageBridge, autodetectStorage = autodetectStorage, checkMonitorSize = checkMonitorSize}
+
+return {    logToFile = logToFile, 
+            getPeripheral = getPeripheral, 
+            getStorageBridge = getStorageBridge, 
+            autodetectStorage = autodetectStorage, 
+            checkMonitorSize = checkMonitorSize,
+            removeNamespace = removeNamespace
+        }
