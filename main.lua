@@ -1,7 +1,7 @@
 
 local VERSION = 1.21
 local debug = false
-local crafting = false
+local crafting_enabled = false
 local ign = "Macika"
 local Logo = require "artLogo"
 local artLogo = Logo.artLogo
@@ -42,7 +42,7 @@ local relay = getPeripheral("redstone_relay")
 
 
 function checkColonyIntegrator()
-    colony = getPeripheral("colony_integrator")
+    colony = getPeripheral("colonyIntegrator") or getPeripheral("colony_integrator")
 
     if colony then
         return true
@@ -195,7 +195,6 @@ end
 function checkAllPeripheral()
     
     if not checkColonyIntegrator() or not colony.isInColony() then
-        --logToFile("Colony Integrator not found", "ERROR")
         missing_setup = true
     end
 
@@ -664,13 +663,13 @@ function requestAndFulfill()
             if requests then
             equipment_list, builder_list, domum_list, others_list = colonyCategorizeRequests(colony, requests)
             else
-            logToFile("Failed to get requests, retrying... (" .. err .. ")", "WARN_", true)
-            sleep(5)
+            logToFile("Failed to get colony requests or no requests found.", "INFO_")
+          
         end
     
 
     -- writeToLogFile("log1.txt", equipment_list, builder_list, others_list)
-    if crafting and bridge and storage then
+    if crafting_enabled and bridge and storage then
         storageSystemHandleRequests(equipment_list)
 
         storageSystemHandleRequests(builder_list)
@@ -684,6 +683,7 @@ function requestAndFulfill()
     return equipment_list, builder_list, domum_list, others_list
 
 end
+
 
 
 
