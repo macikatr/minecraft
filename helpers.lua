@@ -300,5 +300,6 @@ return {    logToFile = logToFile,
             getStorageBridge = getStorageBridge, 
             autodetectStorage = autodetectStorage, 
             checkMonitorSize = checkMonitorSize,
-            removeNamespace = removeNamespace
+            removeNamespace = removeNamespace,
+            safeCall = safeCall
         }

@@ -1,7 +1,7 @@
 local helpers = require "helpers"
 local logToFile = helpers.logToFile
 local removeNamespace = helpers.removeNamespace
-
+local safeCall = helpers.safeCall
 ----------------------------------------------------------------------------
 --* REQUEST HANDLING
 ----------------------------------------------------------------------------
@@ -18,7 +18,7 @@ local function isEquipment(desc)
     return false
 end
 
-function colonyCategorizeRequests(colony)
+function colonyCategorizeRequests(colony, requests)
     local equipment_list = {}
     local builder_list = {}
     local domum_list = {}
@@ -28,13 +28,13 @@ function colonyCategorizeRequests(colony)
         logToFile("Colony Integrator not available for categorizing requests.", "WARN_", true)
         return equipment_list, builder_list, domum_list, others_list
     end
- 
+    --[[
     local success, requests = safeCall(colony.getRequests)
     if not success or not requests or #requests == 0 then
         logToFile("Failed to get colony requests or no requests found.", "INFO_")
         return equipment_list, builder_list, domum_list, others_list
     end
-
+   --]]
     for _, req in ipairs(requests) do
 
         if not req.items or not req.items[1] then
@@ -167,3 +167,6 @@ function colonyCategorizeRequests(colony)
 
     return equipment_list, builder_list, domum_list, others_list
 end
+
+
+return {colonyCategorizeRequests = colonyCategorizeRequests}

@@ -2,7 +2,7 @@
 local VERSION = 1.21
 local debug = false
 local crafting = false
-
+local ign = "Macika"
 local Logo = require "artLogo"
 local artLogo = Logo.artLogo
 
@@ -17,6 +17,11 @@ local logToFile = helpers.logToFile
 local getStorageBridge = helpers.getStorageBridge
 local autodetectStorage = helpers.autodetectStorage
 local checkMonitorSize = helpers.checkMonitorSize
+local safeCall = helpers.safeCall
+
+local crafting = require "crafting"
+local colonyCategorizeRequests = crafting.colonyCategorizeRequests
+
 
 
 
@@ -37,7 +42,7 @@ local relay = getPeripheral("redstone_relay")
 
 
 function checkColonyIntegrator()
-    colony = getPeripheral("colonyIntegrator") or getPeripheral("colony_integrator")
+    colony = getPeripheral("colony_integrator")
 
     if colony then
         return true
@@ -190,6 +195,7 @@ end
 function checkAllPeripheral()
     
     if not checkColonyIntegrator() or not colony.isInColony() then
+        --logToFile("Colony Integrator not found", "ERROR")
         missing_setup = true
     end
 
@@ -454,7 +460,7 @@ function summary(mon)
         local underAttack = "No"
         if colony.isUnderAttack() then
             underAttack = "Yes"
-            cb.sendToastToPlayer("Colony Is Under Attack!", "WARNING", "Macika", "&4&lSystem", "()", "&c&l")
+            cb.sendToastToPlayer("Colony Is Under Attack!", "WARNING", ign, "&4&lSystem", "()", "&c&l")
             speaker.playSound("entity.creeper.primed")
             relay.setAnalogOutput("top", 15)
             sleep(0.5)
@@ -653,18 +659,15 @@ end
 function requestAndFulfill()
     local equipment_list, builder_list, domum_list, others_list
 
-    while true do
-        local success, err = pcall(function()
-            equipment_list, builder_list, domum_list, others_list = colonyCategorizeRequests(colony)
-        end)
+    local requests = colony.getRequests()
 
-        if success then
-            break
-        else
+            if requests then
+            equipment_list, builder_list, domum_list, others_list = colonyCategorizeRequests(colony, requests)
+            else
             logToFile("Failed to get requests, retrying... (" .. err .. ")", "WARN_", true)
             sleep(5)
         end
-    end
+    
 
     -- writeToLogFile("log1.txt", equipment_list, builder_list, others_list)
     if crafting and bridge and storage then
@@ -679,8 +682,8 @@ function requestAndFulfill()
     -- writeToLogFile("log2.txt", equipment_list, builder_list, others_list)
 
     return equipment_list, builder_list, domum_list, others_list
-end
 
+end
 
 
 
@@ -723,9 +726,9 @@ function main()
         
 
 
-        local equipment_list, builder_list, others_list = requestAndFulfill()
+        local equipment_list, builder_list, domum_list, others_list = requestAndFulfill()
 
-        monitorShowDashboard(mon2, equipment_list, builder_list, others_list)
+        monitorShowDashboard(mon2, equipment_list, builder_list, domum_list, others_list)
     end
  
 end

@@ -92,16 +92,17 @@ function drawBox(monitor, xMin, xMax, yMin, yMax, title, bcolor, tcolor)
 end
 
 
-function monitorDashboardRequests(monitor, equipment_list, builder_list, others_list)
+function monitorDashboardRequests(monitor, equipment_list, builder_list, domum_list, others_list)
     local x, y = monitor.getSize()
 
-    local equipment_count = #equipment_list
-    local builder_count = #builder_list
-    local others_count = #others_list
+    local equipment_count = equipment_list == nil and 0 or #equipment_list
+    local builder_count = builder_list == nil and 0 or #builder_list
+    local domum_count = domum_list == nil and 0 or #domum_list
+    local others_count = others_list == nil and 0 or #others_list
 
 
 
-    drawBox(monitor, 2, x - 1, 3, (equipment_count + math.ceil(builder_count / 2) + others_count) + 11, "REQUESTS", colors.gray,
+    drawBox(monitor, 2, x - 1, 3, (equipment_count + domum_count + math.ceil(builder_count / 2) + others_count) + 13, "REQUESTS", colors.gray,
         colors.purple)
 
 
@@ -123,23 +124,43 @@ function monitorDashboardRequests(monitor, equipment_list, builder_list, others_
                 item.displayColor)
         end
     end
+    --Domum
+    monitorPrintText(monitor, math.ceil(builder_count / 2) + 7, "center", "Domum", colors.orange)
+    local half = math.ceil(builder_count / 2)
+
+    for i = 1, half do
+        local item = domum_list[i]
+        if item then
+            monitorPrintText(monitor, i + 5, "left", (item.provided .. "/" .. item.name), item.displayColor)
+        end
+    end
+
+    for i = half + 1, builder_count do
+        local item = builder_list[i]
+        if item then
+            monitorPrintText(monitor, i - half + 5, "right", (item.provided .. "/" .. item.name),
+                item.displayColor)
+        end
+    end
 
 
     --Equipment
-    monitorPrintText(monitor, math.ceil(builder_count / 2) + 7, "center", "Equipment", colors.orange)
-    for i, item in pairs(equipment_list) do
-        monitorPrintText(monitor, math.ceil(builder_count / 2) + i + 7, "left", item.name, item.displayColor)
-        monitorPrintText(monitor, math.ceil(builder_count / 2) + i + 7, "right", item.target, colors.lightGray)
+    monitorPrintText(monitor,domum_count + math.ceil(builder_count / 2) + 9, "center", "Equipment", colors.orange)
+    if equipment_list then
+        for i, item in pairs(equipment_list) do
+        monitorPrintText(monitor, domum_count + math.ceil(builder_count / 2) + i + 9, "left", item.name, item.displayColor)
+        monitorPrintText(monitor, domum_count + math.ceil(builder_count / 2) + i + 9, "right", item.target, colors.lightGray)
+        end
     end
 
 
     --Others
-    monitorPrintText(monitor, equipment_count + math.ceil(builder_count / 2) + 9, "center", "Other", colors.orange)
+    monitorPrintText(monitor, domum_count + equipment_count + math.ceil(builder_count / 2) + 11, "center", "Other", colors.orange)
     for i, item in pairs(others_list) do
-        monitorPrintText(monitor, i + equipment_count + math.ceil(builder_count / 2) + 9, "left",
+        monitorPrintText(monitor, i + domum_count + equipment_count + math.ceil(builder_count / 2) + 11, "left",
             (item.provided .. "/" .. item.name),
             item.displayColor)
-        monitorPrintText(monitor, i + equipment_count + math.ceil(builder_count / 2) + 9, "right", item.target, colors.lightGray)
+        monitorPrintText(monitor, i + domum_count + equipment_count + math.ceil(builder_count / 2) + 11, "right", item.target, colors.lightGray)
     end
 end
 
@@ -233,10 +254,10 @@ function monitorDashboardName(monitor)
 end
 
 --TODO
-function monitorShowDashboard(monitor, equipment_list, builder_list, others_list)
+function monitorShowDashboard(monitor, equipment_list, builder_list, domum_list, others_list)
     monitor.clear()
 
-    monitorDashboardRequests(monitor, equipment_list, builder_list, others_list)
+    monitorDashboardRequests(monitor, equipment_list, builder_list, domum_list, others_list)
 
     --   monitorDashboardResearch()
 
