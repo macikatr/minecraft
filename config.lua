@@ -179,7 +179,11 @@ local refreshInterval = 15
 local rainbowColors = {
     colors.red, colors.orange, colors.yellow,
     colors.green, colors.cyan, colors.blue,
-    colors.purple, colors.magenta, colors.pink
+    colors.purple, colors.magenta, colors.pink,
+    colors.lightBlue, colors.red, colors.orange, colors.yellow,
+    colors.green, colors.cyan, colors.blue,
+    colors.purple, colors.magenta, colors.pink,
+    colors.lightBlue,
 
 }
 
@@ -271,4 +275,6 @@ return { resetDefault = resetDefault,
         drawLoadingBar = drawLoadingBar, 
         monitorPrintText = monitorPrintText,   
         drawBox = drawBox, 
-        monitorShowDashboard = monitorShowDashboard}
+        monitorShowDashboard = monitorShowDashboard,
+        rainbowColors = rainbowColors    
+    }

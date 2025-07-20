@@ -1,7 +1,7 @@
 
 local VERSION = 1.21
 local debug = false
-local crafting_enabled = false
+local crafting_enabled = true -- toggle for auto crafting of requests
 local ign = "Macika"
 local Logo = require "artLogo"
 local artLogo = Logo.artLogo
@@ -10,10 +10,14 @@ local config = require "config"
 local resetDefault = config.resetDefault
 local drawLoadingBar = config.drawLoadingBar
 local monitorShowDashboard = config.monitorShowDashboard
+local monitorPrintText = config.monitorPrintText
+local rainbowColors = config.rainbowColors
 
 local helpers = require "helpers"
 local getPeripheral = helpers.getPeripheral
 local logToFile = helpers.logToFile
+local writeToLogFile = helpers.writeToLogFile
+local removeNameSpace = helpers.removeNamespace
 local getStorageBridge = helpers.getStorageBridge
 local autodetectStorage = helpers.autodetectStorage
 local checkMonitorSize = helpers.checkMonitorSize
@@ -21,6 +25,7 @@ local safeCall = helpers.safeCall
 
 local crafting = require "crafting"
 local colonyCategorizeRequests = crafting.colonyCategorizeRequests
+local storageSystemHandleRequests = crafting.storageSystemHandleRequests
 
 
 
@@ -43,32 +48,18 @@ local relay = getPeripheral("redstone_relay")
 
 function checkColonyIntegrator()
     colony = getPeripheral("colonyIntegrator") or getPeripheral("colony_integrator")
-
-    if colony then
-        return true
-    else
-        return false
-    end
+    if colony then return true else return false end
 end
 
 function checkBridge()
     bridge = getStorageBridge()
-
-    if bridge then
-        return true
-    else
-        return false
-    end
+    if bridge then return true else return false end
 end
 
 function checkStorage()
     storage = autodetectStorage()
 
-    if storage then
-        return true
-    else
-        return false
-    end
+    if storage then return true else return false end
 end
 
 
@@ -394,39 +385,54 @@ end
 local function convert(num)
     local newnumber = string.sub(tostring(num), 1,4)
 	newnumber = tonumber(newnumber)
-	return newnumber
+	return tostring(newnumber)
 end
 
 function printCitizens()
-    row = 3
-    useLeft = true
-    for k, v in ipairs(colony.getCitizens()) do
-        if row > 40 then
-            useLeft = false
-            row = 3
-        end
-        
-        gender = ""
-        if v.gender == nil then
+    local x, y = mon1.getSize()
+    local citizens = colony.getCitizens()
+
+    drawBox(mon1, 2, x - 1, 3, ( math.ceil(#citizens / 2)) + 13, "CITIZENS", colors.gray,
+        colors.purple)
+
+     --Citizens
+    monitorPrintText(mon1, 5, "left", "Name:", colors.orange)
+     for i = 1, #citizens do
+        local person = citizens[i]
+        local gender  = ""
+        if person then
+            if person.gender == nil then
             gender = "U"
-        elseif v.gender == "male" then
+        elseif person.gender == "male" then
             gender = "M"  
         else
             gender = "F"
         end
-        work = ""
-        if v.work == nil then
+            monitorPrintText(mon1, i + 5, "left", (person.name .. " / " .. gender), rainbowColors[i] or colors.white)
+        end
+    end
+    monitorPrintText(mon1, 5, "right", "-JOB-", colors.orange)
+     for i = 1, #citizens do
+        local person = citizens[i]
+        local work = ""
+        if person.work == nil then
             work = "Jobless"
         else
-            work = v.work.job
+            work = removeNameSpace(person.work.job, "com.minecolonies.job.")
         end 
-        if useLeft then
-            centerText(mon1, v.name.." - ".. convert(v.happiness).." - "..work.." - "..gender, row, colors.black, colors.white, "left")        
-        else
-            centerText(mon1, v.name.. " - ".. gender, row, colors.black, colors.white, "right")
+        
+            monitorPrintText(mon1, i + 5, "right", work, rainbowColors[i] or colors.white)
         end
-        row = row+1
-    end
+    monitorPrintText(mon1, 5, "center", "-HAPPINESS-", colors.orange)
+     for i = 1, #citizens do
+        local person = citizens[i]
+        local happiness = convert(person.happiness)
+         
+        
+            monitorPrintText(mon1, i + 5, "center", happiness, rainbowColors[i] or colors.white)
+        end
+    
+    
 end
  
 
@@ -434,7 +440,7 @@ end
 
 function summary(mon)
     curx, cury = mon.getCursorPos()
-    cury = cury +3
+    cury = cury +6
     mon.setTextScale(0.5)
 
     local text_Divider = "-------------------------------------------------------"
@@ -483,176 +489,6 @@ end
 --            blue = crafting
 --           green = fully exported
 
--- Try or skip equipment craft
-local b_craftEquipment = true
-
--- Choose "Iron" or "Diamond" or "Iron and Diamond"
-local craftEquipmentOfLevel = "Iron"
-
-function equipmentCraft(name, level, item_name)
-    if (item_name == "minecraft:bow") then
-        return item_name, true
-    end
-
-    if (level == "Iron" or level == "Iron and Diamond" or level == "Any Level") and (craftEquipmentOfLevel == "Iron" or craftEquipmentOfLevel == "Iron and Diamond") then
-        if level == "Any Level" then
-            level = "Iron"
-        end
-
-        item_name = string.lower("minecraft:" .. level .. "_" .. getLastWord(name))
-
-        return item_name, true
-    elseif (level == "Diamond" or level == "Iron and Diamond" or level == "Any Level") and craftEquipmentOfLevel == "Diamond" then
-        if level == "Any Level" then
-            level = "Diamond"
-        end
-
-        item_name = string.lower("minecraft:" .. level .. "_" .. getLastWord(name))
-        return item_name, true
-    end
-
-    return item_name, false
-end
-
-local item_quantity_field = nil
-
-local function detectQuantityField(itemName)
-    local success, itemData = pcall(function()
-        return bridge.getItem({ name = itemName })
-    end)
-
-    if success and itemData then
-        if type(itemData.amount) == "number" then
-            return "amount"
-        elseif type(itemData.count) == "number" then
-            return "count"
-        end
-    end
-
-    return nil
-end
-
-function storageSystemHandleRequests(request_list)
-
-    -- Add items that should not be crafted or send to the Warehouse
-    local skip_items = {
-        "minecraft:enchanted_book",
-    }
-    local skip_set = {}
-    for _, name in ipairs(skip_items) do
-        skip_set[name] = true
-    end
-
-    for _, item in ipairs(request_list) do
-        local itemStored = 0
-        local b_CurrentlyCrafting = false
-        local b_equipmentCraft = true
-
-        if skip_set[item.item_name] then
-            item.displayColor = colors.gray
-            goto continue
-        end
-
-        if item.equipment then
-            item.item_name, b_equipmentCraft = equipmentCraft(item.name, item.level, item.item_name)
-        end
-
-        -- Detect field once
-        if not item_quantity_field then
-            item_quantity_field = detectQuantityField(item.item_name)
-        end
-
-        --getItem() to see if item in system (if not, error), count and if craftable
-        b_functionGetItem = pcall(function()
-            local itemData = bridge.getItem({ name = item.item_name })
-            itemStored = itemData[item_quantity_field] or 0
-            item.isCraftable = itemData.isCraftable
-        end)
-
-        if not b_functionGetItem then
-            logToFile(item.item_displayName .. " not in system or craftable.", "INFO_", true)
-
-            item.displayColor = colors.red
-
-            if string.sub(item.item_name, 1, 17) == "domum_ornamentum:" then
-                item.displayColor = colors.lightBlue
-            end
-
-            goto continue
-        end
-
-        if not (itemStored == 0) then
-            b_functionExportItemToPeripheral = pcall(function()
-                item.provided = bridge.exportItemToPeripheral({ name = item.item_name, count = item.count }, storage)
-            end) or pcall(function()
-                item.provided = bridge.exportItem({ name = item.item_name, count = item.count }, storage)
-            end)
-
-            if not b_functionExportItemToPeripheral then
-                logToFile("Failed to export item.", "WARN_", true)
-                item.displayColor = colors.yellow
-            end
-
-            if (item.provided == item.count) then
-                item.displayColor = colors.green
-
-                if string.sub(item.item_name, 1, 17) == "domum_ornamentum:" then
-                    item.displayColor = colors.lightBlue
-                end
-            else
-                item.displayColor = colors.yellow
-            end
-        end
-
-        if not b_craftEquipment and item.equipment then
-            goto continue
-        end
-
-        if (item.provided < item.count) and item.isCraftable and b_equipmentCraft then
-            b_functionIsItemCrafting = safeCall(function()
-                b_CurrentlyCrafting = bridge.isItemCrafting({ name = item.item_name })
-            end)
-
-            if not b_functionIsItemCrafting then
-                logToFile("Asking for crafting job failed.", "WARN_")
-            end
-
-            if b_CurrentlyCrafting then
-                item.displayColor = colors.blue
-                goto continue
-            end
-        end
-
-        local b_craftItem = not b_CurrentlyCrafting and item.isCraftable and (item.provided < item.count)
-
-        if b_craftItem then
-            -- Skip Equipments if set to false
-            if not b_craftEquipment and item.equipment then
-                goto continue
-            end
-
-            b_functionCraftItem = safeCall(function()
-                local craftedItem = { name = item.item_name, count = item.count - item.provided }
-
-                return bridge.craftItem(craftedItem)
-            end)
-
-            if not b_functionCraftItem then
-                logToFile("Crafting request failed. (Items missing)", "WARN_", true)
-                item.displayColor = colors.yellow
-                goto continue
-            end
-
-            item.displayColor = colors.blue
-        end
-
-        ::continue::
-    end
-end
-
-
-
-
 
 
 function requestAndFulfill()
@@ -667,18 +503,16 @@ function requestAndFulfill()
           
         end
     
-
-    -- writeToLogFile("log1.txt", equipment_list, builder_list, others_list)
+    --writeToLogFile("log1.txt", equipment_list, builder_list, domum_list, others_list)
     if crafting_enabled and bridge and storage then
-        storageSystemHandleRequests(equipment_list)
+        -- storageSystemHandleRequests(bridge, storage, equipment_list)
 
-        storageSystemHandleRequests(builder_list)
+        storageSystemHandleRequests(bridge, storage, builder_list)
 
-        storageSystemHandleRequests(domum_list)
+        -- storageSystemHandleRequests(bridge, storage, domum_list)
 
-        storageSystemHandleRequests(others_list)
+        -- storageSystemHandleRequests(bridge, storage, others_list)
     end
-    -- writeToLogFile("log2.txt", equipment_list, builder_list, others_list)
 
     return equipment_list, builder_list, domum_list, others_list
 
@@ -693,11 +527,11 @@ end
 ----------------------------------------------------------------------------
 
 function main()
-    termLoadingAnimation()
+    -- termLoadingAnimation()
     
     checkAllPeripheral()
 
-    monitorLoadingAnimation(mon2)
+    -- monitorLoadingAnimation(mon2)
 
 
     while true do
@@ -714,12 +548,12 @@ function main()
 
         term.setCursorPos(1, 5)
 
-        prepareMonitor1()
+        --prepareMonitor1()
 
         printCitizens()
         
         summary(mon1)
-        sleep(10)
+        sleep(5)
 
 
 

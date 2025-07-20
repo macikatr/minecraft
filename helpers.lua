@@ -182,6 +182,14 @@ function getLastWord(str)
     return string.match(str, "%S+$")
 end
 
+-- function getLastWord(str)
+--     local words = {}
+--     for word in string.gmatch(str, "%S+") do
+--         table.insert(words, word)
+--     end
+--     return words[#words] or "" 
+-- end
+
 function tableToString(tbl, indent)
     indent = indent or 0
     local toString = string.rep("  ", indent) .. "{\n"
@@ -200,37 +208,25 @@ function tableToString(tbl, indent)
     return toString .. string.rep("  ", indent) .. "}"
 end
 
-function writeToLogFile(fileName, equipment_list, builder_list, others_list)
-    local file = io.open(fileName, "w") -- Open file in write mode
-
-    if not file then
-        error("Could not open file for writing: " .. fileName)
+function writeToLogFile(fileName, equipment_list, builder_list, domum_list, others_list)
+    local success, file_or_err = pcall(io.open, fileName, "w")
+    if not success then
+        logToFile("Could not open file for writing: " .. fileName .. " Error: " .. tostring(file_or_err), "ERROR", true)
+        return
     end
-
-    -- Write the contents of each list
+    local file = file_or_err
+    if file then
     file:write("Equipment List:\n")
     file:write(tableToString(equipment_list) .. "\n\n")
-
-    file:write("Builder List:\n")
+    file:write("Standard Builder List:\n")
     file:write(tableToString(builder_list) .. "\n\n")
-
+    file:write("Domum Builder List:\n")
+    file:write(tableToString(domum_list) .. "\n\n")
     file:write("Others List:\n")
     file:write(tableToString(others_list) .. "\n\n")
-
-    file:close() -- Close the file
-end
-
-local function ensure_width(line, width)
-    width = width or term.getSize()
-
-    line = line:sub(1, width)
-    if #line < width then
-        line = line .. (" "):rep(width - #line)
+    file:close()
     end
-
-    return line
 end
-
 
 function getPeripheral(type)
     local peripheral = peripheral.find(type)
@@ -284,22 +280,142 @@ function autodetectStorage()
 
     return nil
 end
-
-function removeNamespace(itemName)
+--* to remove mod name minecraft:coal -> coal
+function removeNamespace(itemName, pattern)
     if type(itemName) ~= "string" then return tostring(itemName) end
-    local colonIndex = string.find(itemName, ":")
-    if colonIndex then
-        return string.sub(itemName, colonIndex + 1)
+    local indexStart, IndexEnd = string.find(itemName, pattern)
+    if IndexEnd then
+        return string.sub(itemName, IndexEnd + 1)
     end
     return itemName
 end
 
+----------------------------------------------------------------------------
+--* NBT TO SNBT STRING CONVERSION HELPER (SIMPLIFIED)
+----------------------------------------------------------------------------
+function convertNbtToSnbtString(nbtTable)
+    if type(nbtTable) ~= "table" then
+        logToFile("convertNbtToSnbtString: Input is not a table, returning nil. Type: " .. type(nbtTable), "WARN_")
+        return nil
+    end
+    if next(nbtTable) == nil then
+        logToFile("convertNbtToSnbtString: Input table is empty, returning empty SNBT string '{}'.", "DEBUG")
+        return "{}"
+    end
+
+    local parts = {}
+    for key, value in pairs(nbtTable) do
+        local keyStr = tostring(key) 
+
+        if type(value) == "string" then
+            local escapedValue = string.gsub(value, "\\", "\\\\")
+            escapedValue = string.gsub(escapedValue, "\"", "\\\"")
+            table.insert(parts, string.format("%s:\"%s\"", keyStr, escapedValue))
+        elseif type(value) == "number" then
+            table.insert(parts, string.format("%s:%s", keyStr, tostring(value)))
+        elseif type(value) == "boolean" then
+            table.insert(parts, string.format("%s:%s", keyStr, tostring(value)))
+        elseif keyStr == "textureData" and type(value) == "table" then
+            local textureParts = {}
+            for texKey, texValue in pairs(value) do
+                if type(texValue) == "string" then
+                    local escapedTexKey = string.gsub(tostring(texKey), "\\", "\\\\")
+                    escapedTexKey = string.gsub(escapedTexKey, "\"", "\\\"")
+                    local escapedTexValue = string.gsub(texValue, "\\", "\\\\")
+                    escapedTexValue = string.gsub(escapedTexValue, "\"", "\\\"")
+                    table.insert(textureParts, string.format("\"%s\":\"%s\"", escapedTexKey, escapedTexValue))
+                else
+                    logToFile("convertNbtToSnbtString: Non-string value found in textureData for key '" .. tostring(texKey) .. "'. Skipping.", "WARN_")
+                end
+            end
+            table.insert(parts, string.format("%s:{%s}", keyStr, table.concat(textureParts, ",")))
+        else
+            logToFile(string.format("convertNbtToSnbtString: Unsupported type '%s' for key '%s' or unhandled complex table. Value: %s", type(value), keyStr, tableToString(value)), "WARN_")
+        end
+    end
+    local snbtString = "{" .. table.concat(parts, ",") .. "}"
+    logToFile("convertNbtToSnbtString: Converted NBT table to SNBT string: " .. snbtString, "TRACE")
+    return snbtString
+end
+
+local function isEquipment(desc)
+    if type(desc) ~= "string" then return false end
+    local equipmentKeywords = { "Sword ", "Bow ", "Pickaxe ", "Axe ", "Shovel ", "Hoe ", "Shears ", "Helmet ",
+        "Chestplate ", "Leggings ", "Boots ", "Shield" }
+
+    for _, keyword in ipairs(equipmentKeywords) do
+        if string.find(desc, keyword) then
+            return true
+        end
+    end
+    return false
+end
+
+function equipmentCraft(name, level, item_name)
+    if (item_name == "minecraft:bow") then
+        return item_name, true
+    end
+
+    if (level == "Iron" or level == "Iron and Diamond" or level == "Any Level") and (craftEquipmentOfLevel == "Iron" or craftEquipmentOfLevel == "Iron and Diamond") then
+        if level == "Any Level" then
+            level = "Iron"
+        end
+
+        item_name = string.lower("minecraft:" .. level .. "_" .. getLastWord(name))
+
+        return item_name, true
+    elseif (level == "Diamond" or level == "Iron and Diamond" or level == "Any Level") and craftEquipmentOfLevel == "Diamond" then
+        if level == "Any Level" then
+            level = "Diamond"
+        end
+
+        item_name = string.lower("minecraft:" .. level .. "_" .. getLastWord(name))
+        return item_name, true
+    end
+
+    return item_name, false
+end
+
+function detectQuantityFieldOnce(bridge, itemName, nbtTable, fingerprint)
+    local item_quantity_field = nil
+    local spec
+    if fingerprint then
+        spec = {fingerprint = fingerprint}
+    else
+        spec = {name = itemName}
+        if nbtTable then 
+            local nbtString = convertNbtToSnbtString(nbtTable)
+            if nbtString then spec.nbt = nbtString end
+        end
+    end
+ 
+    local success, itemDataResult = safeCall(bridge.getItem, spec)
+    if success and itemDataResult then
+        if type(itemDataResult.amount) == "number" then item_quantity_field = "amount"; return "amount" end
+        if type(itemDataResult.count) == "number" then item_quantity_field = "count"; return "count" end
+        logToFile("Could not detect quantity field (amount/count) for " .. itemName .. ". Spec: " ..tableToString(spec), "WARN_")
+    else
+        logToFile("Failed to getItem for quantity field detection: " .. itemName .. ". Error: " ..tostring(itemDataResult) .. ". Spec: " .. tableToString(spec), "WARN_")
+    end
+    logToFile("Defaulting quantity field to 'amount' for " .. itemName, "DEBUG")
+    item_quantity_field = "amount" 
+    return item_quantity_field
+end
+
 
 return {    logToFile = logToFile, 
+            writeToLogFile = writeToLogFile,
+            tableToString = tableToString,
             getPeripheral = getPeripheral, 
             getStorageBridge = getStorageBridge, 
             autodetectStorage = autodetectStorage, 
             checkMonitorSize = checkMonitorSize,
             removeNamespace = removeNamespace,
-            safeCall = safeCall
+            trimLeadingWhitespace = trimLeadingWhitespace,
+            safeCall = safeCall,
+            isEquipment = isEquipment,
+            convertNbtToSnbtString = convertNbtToSnbtString,
+            equipmentCraft = equipmentCraft,
+            detectQuantityFieldOnce = detectQuantityFieldOnce,
+            bShowInGameLog = bShowInGameLog
         }
