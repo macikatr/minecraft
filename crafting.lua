@@ -57,9 +57,7 @@ function colonyCategorizeRequests(colony, storage, requests)
                 
             end
         end
-        -- rednet.send(5, item_name_raw, "spec1")
-        -- rednet.send(5, isProvided, "spec2")
-        -- os.sleep(1)
+        
         local itemEntry = {
             id = requestId,
             name = formattedName, 
@@ -229,7 +227,7 @@ function storageSystemHandleRequests(bridge, storage, request_list)
         end
         
         local qtyField = detectQuantityFieldOnce(bridge, itemToRequest, (useOriginalNbtAndFingerprint and nbtTableForRequest) or nil, (useOriginalNbtAndFingerprint and fingerprintForRequest) or nil)
-        -- rednet.send(5, qtyField, "qtyField")
+        
         if isDomumItem then logToFile("  Using Qty Field: " .. qtyField .. " for item: " .. itemToRequest, "DEBUG", bShowInGameLog) end
         
         local itemData, itemStoredSystem, itemIsCraftableSystemAE
@@ -249,12 +247,12 @@ function storageSystemHandleRequests(bridge, storage, request_list)
             if isDomumItem or item.equipment then logToFile("  Calling bridge.getItem for '"..itemToRequest.."' with name/NBT string spec: " .. tableToString(getItemSpec), "DEBUG", bShowInGameLog) end
         end
         
-        -- rednet.send(5, getItemSpec, "getItemSpec")
+        
         -- local successGetItem, resultGetItem = safeCall(bridge.getItem, getItemSpec)
         local successGetItem, resultGetItem = pcall(function()
                 return bridge.getItem(getItemSpec)
             end)
-        -- rednet.send(5,resultGetItem[qtyField], "spec")
+        
         if successGetItem and resultGetItem then
             itemData = resultGetItem
             itemStoredSystem = itemData[qtyField] or 0

@@ -396,8 +396,7 @@ function detectQuantityFieldOnce(bridge, itemName, nbtTable, fingerprint)
             if nbtString then spec.nbt = nbtString end
         end
     end
-    -- rednet.send(5, "item: "..itemName.." finger: "..fingerprint, "spec")
-    -- rednet.send(5,spec, "spec")
+    
     local success, itemDataResult = pcall(function()
         return bridge.getItem(spec)
     end)

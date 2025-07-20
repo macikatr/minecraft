@@ -358,32 +358,6 @@ end
 ----------------------------------------------------------------------------
 
 
-function centerText(mon, text, line, txtback, txtcolor, pos)
-    monX, monY = mon.getSize()
-    mon.setBackgroundColor(txtback)
-    mon.setTextColor(txtcolor)
-    length = string.len(text)
-    dif = math.floor(monX-length)
-    x = math.floor(dif/2)
-    
-    if pos == "head" then
-        mon.setCursorPos(x+1, line)
-        mon.write(text)
-    elseif pos == "left" then
-        mon.setCursorPos(2, line)
-        mon.write(text) 
-    elseif pos == "right" then
-        mon.setCursorPos(monX-length, line)
-        mon.write(text)
-    end
-end
- 
-function prepareMonitor1() 
-    mon1.clear()
-    mon1.setTextScale(0.5)
-    centerText(mon1, "Citizens", 1, colors.black, colors.white, "head")
-end
-
 local function convert(num)
     local newnumber = string.sub(tostring(num), 1,4)
 	newnumber = tonumber(newnumber)
@@ -410,6 +384,7 @@ function printCitizens()
         else
             gender = "F"
         end
+            rednet.send(5, person.betterFood, "spec1")
             monitorPrintText(mon1, i + 5, "left", (person.name .. " / " .. gender), rainbowColors[i] or colors.white)
         end
     end
@@ -550,8 +525,7 @@ function main()
 
         term.setCursorPos(1, 5)
 
-        --prepareMonitor1()
-
+        
         printCitizens()
         
         summary(mon1)
