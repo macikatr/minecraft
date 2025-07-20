@@ -243,9 +243,9 @@ end
 function checkMonitorSize(monitor)
     monitor.setTextScale(0.5)
     local width, height = monitor.getSize()
-
-    if width < 79 or height < 38 then
-        logToFile("Use more Monitors! (min 4x3)", "WARN_")
+    
+    if width < 79 or height < 52 then
+        logToFile("Use more Monitors! (min 4x4)"..height.." "..width, "WARN_")
 
         return false
     end

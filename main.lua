@@ -245,7 +245,7 @@ function termDrawCheckRequirements()
     term.setCursorPos(2, 6)
     term.write(text_Monitor_1)
 
-    local text_Monitor_2 = "\16 Monitor size (min 4x3)"
+    local text_Monitor_2 = "\16 Monitor size (min 4x4)"
     term.setCursorPos(2, 8)
     term.write(text_Monitor_2)
 
@@ -527,11 +527,11 @@ end
 ----------------------------------------------------------------------------
 
 function main()
-    -- termLoadingAnimation()
+    termLoadingAnimation()
     
     checkAllPeripheral()
 
-    -- monitorLoadingAnimation(mon2)
+    monitorLoadingAnimation(mon2)
 
 
     while true do
