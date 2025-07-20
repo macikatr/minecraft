@@ -9,12 +9,15 @@ local equipmentCraft = helpers.equipmentCraft
 local detectQuantityFieldOnce = helpers.detectQuantityFieldOnce
 local convertNbtToSnbtString = helpers.convertNbtToSnbtString
 local trimLeadingWhitespace = helpers.trimLeadingWhitespace
+
+
+
 ----------------------------------------------------------------------------
 --* REQUEST HANDLING
 ----------------------------------------------------------------------------
 
 
-function colonyCategorizeRequests(colony , requests)
+function colonyCategorizeRequests(colony, storage, requests)
     local equipment_list = {}
     local builder_list = {}
     local domum_list = {}
@@ -45,7 +48,18 @@ function colonyCategorizeRequests(colony , requests)
         local fingerprintToStore = req.items[1].fingerprint --> -3452345235432
         local formattedName = name_from_req --> Chestplate, 1 Oak Door, 16 Mutton Dinner
         local isDomumOrnamentumItem = string.find(item_name_raw, "domum_ornamentum:", 1, true) == 1 --> boolean
-        print(req.id)
+        local isProvided = false
+        local providedAmount = 0
+        for slot, exportedItem in pairs(storage.list()) do
+            if exportedItem.name == item_name_raw then
+                isProvided = true
+                providedAmount = exportedItem.count
+                
+            end
+        end
+        -- rednet.send(5, item_name_raw, "spec1")
+        -- rednet.send(5, isProvided, "spec2")
+        -- os.sleep(1)
         local itemEntry = {
             id = requestId,
             name = formattedName, 
@@ -55,7 +69,7 @@ function colonyCategorizeRequests(colony , requests)
             item_name_raw = item_name_raw, 
             item_name = item_name_raw,     
             desc = desc, 
-            provided = 0, 
+            provided = providedAmount, 
             isCraftable = false,
             equipment = itemIsEquipment, 
             displayColor = colors.white, 
@@ -176,7 +190,13 @@ function storageSystemHandleRequests(bridge, storage, request_list)
         local isDomumItem = string.find(item.item_name_raw, "domum_ornamentum:", 1, true) == 1
         
         local useOriginalNbtAndFingerprint = fingerprintForRequest ~= nil
-
+        local isProvided = false
+        for slot, exportedItem in pairs(storage.list()) do
+            if exportedItem.name == itemToRequest then
+                isProvided = true
+                
+            end
+        end
         if isDomumItem then
             logToFile("Processing Domum Request: " .. item.item_displayName, "DEBUG", bShowInGameLog)
             logToFile("  Original Raw ID: " .. item.item_name_raw, "DEBUG", bShowInGameLog)
@@ -209,6 +229,7 @@ function storageSystemHandleRequests(bridge, storage, request_list)
         end
         
         local qtyField = detectQuantityFieldOnce(bridge, itemToRequest, (useOriginalNbtAndFingerprint and nbtTableForRequest) or nil, (useOriginalNbtAndFingerprint and fingerprintForRequest) or nil)
+        -- rednet.send(5, qtyField, "qtyField")
         if isDomumItem then logToFile("  Using Qty Field: " .. qtyField .. " for item: " .. itemToRequest, "DEBUG", bShowInGameLog) end
         
         local itemData, itemStoredSystem, itemIsCraftableSystemAE
@@ -228,8 +249,12 @@ function storageSystemHandleRequests(bridge, storage, request_list)
             if isDomumItem or item.equipment then logToFile("  Calling bridge.getItem for '"..itemToRequest.."' with name/NBT string spec: " .. tableToString(getItemSpec), "DEBUG", bShowInGameLog) end
         end
         
-        local successGetItem, resultGetItem = safeCall(bridge.getItem, getItemSpec)
- 
+        -- rednet.send(5, getItemSpec, "getItemSpec")
+        -- local successGetItem, resultGetItem = safeCall(bridge.getItem, getItemSpec)
+        local successGetItem, resultGetItem = pcall(function()
+                return bridge.getItem(getItemSpec)
+            end)
+        -- rednet.send(5,resultGetItem[qtyField], "spec")
         if successGetItem and resultGetItem then
             itemData = resultGetItem
             itemStoredSystem = itemData[qtyField] or 0
@@ -243,8 +268,9 @@ function storageSystemHandleRequests(bridge, storage, request_list)
         
         item.isCraftable = itemIsCraftableSystemAE 
  
-        if itemStoredSystem > 0 then
+        if itemStoredSystem > 0 and not isProvided then
             local countToExport = item.count - item.provided
+            -- item.provided = countToExport
             if countToExport > 0 then
                 local exportSpec = { name = itemToRequest, count = countToExport }
 
@@ -262,8 +288,11 @@ function storageSystemHandleRequests(bridge, storage, request_list)
                     if isDomumItem or item.equipment then logToFile("  Calling bridge.exportItemToPeripheral for '"..itemToRequest.."' with name/NBT string spec: " .. tableToString(exportSpec), "DEBUG", bShowInGameLog) end
                 end
                 
-                local successExport, exportedResult = safeCall(bridge.exportItemToPeripheral, exportSpec, storage)
-                
+                -- local successExport, exportedResult = safeCall(bridge.exportItemToPeripheral, exportSpec, storage)
+                local successExport, exportedResult = pcall(function()
+                    return bridge.exportItem(exportSpec, "left")
+                    -- return bridge.exportItemToPeripheral(exportSpec, storage)
+                end)
                 if successExport and exportedResult then
                     local exportedAmountValue = 0
                     if type(exportedResult) == "number" then
@@ -277,7 +306,9 @@ function storageSystemHandleRequests(bridge, storage, request_list)
                     else
                         logToFile("Unexpected result type/structure from exportItemToPeripheral for " .. item.item_displayName .. " ("..itemToRequest.."): " .. type(exportedResult) .. " Value: " .. tableToString(exportedResult or {}), "WARN_", bShowInGameLog)
                     end
+                    ---------
                     item.provided = item.provided + (tonumber(exportedAmountValue) or 0)
+                    ---------
                     if isDomumItem or item.equipment then logToFile("  Exported: " .. exportedAmountValue .. " of "..itemToRequest..", New Provided: " .. item.provided, "DEBUG", bShowInGameLog) end
                 else
                     logToFile("Failed to export " .. item.item_displayName .. " (as "..itemToRequest.."). exportSpec: " .. tableToString(exportSpec) .. " Err: " .. tostring(exportedResult), "WARN_", true)
@@ -297,7 +328,10 @@ function storageSystemHandleRequests(bridge, storage, request_list)
                     local nbtString = convertNbtToSnbtString(nbtTableForRequest)
                     if nbtString then recheckSpec.nbt = nbtString end
                 end
-                local successRecheck, recheckResultData = safeCall(bridge.getItem, recheckSpec)
+                -- local successRecheck, recheckResultData = safeCall(bridge.getItem, recheckSpec)
+                local successRecheck, recheckResultData = pcall(function()
+                    return bridge.getItem(recheckSpec)
+                end)
                 if successRecheck and recheckResultData then
                     currentItemInSystem = recheckResultData[qtyField] or 0
                 end
@@ -322,7 +356,10 @@ function storageSystemHandleRequests(bridge, storage, request_list)
             if nbtStringToCraft then isItemCraftingSpec.nbt = nbtStringToCraft end
 
             if isDomumItem or item.equipment or nbtStringToCraft then logToFile("  Calling bridge.isItemCrafting for '"..itemToRequest.."' with spec: " .. tableToString(isItemCraftingSpec), "DEBUG", bShowInGameLog) end
-            local successCraftingCheck, isCurrentlyCrafting = safeCall(bridge.isItemCrafting, isItemCraftingSpec)
+            -- local successCraftingCheck, isCurrentlyCrafting = safeCall(bridge.isItemCrafting, isItemCraftingSpec)
+            local successCraftingCheck, isCurrentlyCrafting = pcall(function()
+                return bridge.isItemCrafting(isItemCraftingSpec)
+            end)
  
             if successCraftingCheck and isCurrentlyCrafting then
                 item.displayColor = colors.blue 
@@ -333,6 +370,11 @@ function storageSystemHandleRequests(bridge, storage, request_list)
 
                 if isDomumItem or item.equipment or nbtStringToCraft then logToFile("  Calling bridge.craftItem for '"..itemToRequest.."' with spec: " .. tableToString(craftSpec), "DEBUG", bShowInGameLog) end
                 local successCraft, craftInitiateResult = safeCall(bridge.craftItem, craftSpec)
+                local successCraft, craftInitiateResult = pcall(function()
+                    return bridge.craftItem(craftSpec)
+                end)
+
+
                 if successCraft and craftInitiateResult then 
                     item.displayColor = colors.blue 
                     logToFile("Crafting initiated for: " .. item.item_displayName .. " (as " .. itemToRequest .. ")", "INFO_", bShowInGameLog)

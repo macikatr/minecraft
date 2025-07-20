@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------
---* ART
+--* ART generated from https://www.asciiart.eu/text-to-ascii-art
 ----------------------------------------------------------------------------
 
 local artLogo = [[
@@ -14,4 +14,4 @@ local artLogo = [[
  \____\___/|_|\___/|_| |_|_|\___||___/
 ]]
 
-return { artLogo = artLogo}
+return { artLogo = artLogo }

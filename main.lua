@@ -28,6 +28,8 @@ local colonyCategorizeRequests = crafting.colonyCategorizeRequests
 local storageSystemHandleRequests = crafting.storageSystemHandleRequests
 
 
+-- Initialize Rednet
+rednet.open("top")
 
 
 ----------------------------------------------------------------------------
@@ -476,7 +478,7 @@ function summary(mon)
     mon.write("Overall happiness: ".. math.floor(colony.getHappiness()))
     mon.setCursorPos(2, cury+9)
     mon.write("Amount of graves: ".. colony.amountOfGraves())
-    
+       
 end
 
 
@@ -496,8 +498,8 @@ function requestAndFulfill()
 
     local requests = colony.getRequests()
 
-            if requests then
-            equipment_list, builder_list, domum_list, others_list = colonyCategorizeRequests(colony, requests)
+            if requests and storage then
+            equipment_list, builder_list, domum_list, others_list = colonyCategorizeRequests(colony, storage, requests)
             else
             logToFile("Failed to get colony requests or no requests found.", "INFO_")
           

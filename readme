@@ -3,9 +3,19 @@ to make additions to other useful codes for the same purpose.
 credits:
 VentedSun
 nguyen-vh
-enesmalik
 
 Tweaked for Multiple Monitors, Chatbox from Advanced Peripherials and CC:Tweaked Speaker and Redstone Relay usages..
+
+Setup:
+Within Colony boundaries:
+Wired modems for all peripherals below
+- At least 2 advanced monitors (4x4)
+- Advanced computer + chest + mebridge respectively
+- Speaker + Chat box + Redstone Relay with a redstone lamp on top of it
+- ae2 storage system should be connected to bridge 
+
+files should be placed in saves/computercraft/idfolder/
+and run main.lua file
 
 ALL THE MODS 10 
 neoforge : 21.1.191

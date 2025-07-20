@@ -178,17 +178,17 @@ function trimLeadingWhitespace(str)
     return str:match("^%s*(.*)$")
 end
 
-function getLastWord(str)
-    return string.match(str, "%S+$")
-end
-
 -- function getLastWord(str)
---     local words = {}
---     for word in string.gmatch(str, "%S+") do
---         table.insert(words, word)
---     end
---     return words[#words] or "" 
+--     return string.match(str, "%S+$")
 -- end
+
+function getLastWord(str)
+    local words = {}
+    for word in string.gmatch(str, "%S+") do
+        table.insert(words, word)
+    end
+    return words[#words] or "" 
+end
 
 function tableToString(tbl, indent)
     indent = indent or 0
@@ -269,13 +269,21 @@ function getStorageBridge()
 end
 
 function autodetectStorage()
-    for _, side in pairs(peripheral.getNames()) do
-        if peripheral.hasType(side, "inventory") then
-            -- logToFile("Storage detected on " .. side)
 
-            return side
-        end
+    local chest = peripheral.find("minecraft:chest")
+
+    if chest then 
+        logToFile("Storage detected")
+
+            return chest
     end
+    -- for _, side in pairs(peripheral.getNames()) do
+    --     if peripheral.hasType(side, "inventory") then
+    --         -- logToFile("Storage detected on " .. side)
+
+    --         return side
+    --     end
+    -- end
     logToFile("No storage container detected!", "WARN_")
 
     return nil
@@ -388,8 +396,12 @@ function detectQuantityFieldOnce(bridge, itemName, nbtTable, fingerprint)
             if nbtString then spec.nbt = nbtString end
         end
     end
- 
-    local success, itemDataResult = safeCall(bridge.getItem, spec)
+    -- rednet.send(5, "item: "..itemName.." finger: "..fingerprint, "spec")
+    -- rednet.send(5,spec, "spec")
+    local success, itemDataResult = pcall(function()
+        return bridge.getItem(spec)
+    end)
+        
     if success and itemDataResult then
         if type(itemDataResult.amount) == "number" then item_quantity_field = "amount"; return "amount" end
         if type(itemDataResult.count) == "number" then item_quantity_field = "count"; return "count" end
