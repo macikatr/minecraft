@@ -384,7 +384,7 @@ function printCitizens()
         else
             gender = "F"
         end
-            rednet.send(5, person.betterFood, "spec1")
+            -- rednet.send(5, person.betterFood, "spec1")
             monitorPrintText(mon1, i + 5, "left", (person.name .. " / " .. gender), rainbowColors[i] or colors.white)
         end
     end
@@ -482,13 +482,13 @@ function requestAndFulfill()
     
     --writeToLogFile("log1.txt", equipment_list, builder_list, domum_list, others_list)
     if crafting_enabled and bridge and storage then
-        -- storageSystemHandleRequests(bridge, storage, equipment_list)
+        storageSystemHandleRequests(bridge, storage, equipment_list)
 
         storageSystemHandleRequests(bridge, storage, builder_list)
 
-        -- storageSystemHandleRequests(bridge, storage, domum_list)
+        storageSystemHandleRequests(bridge, storage, domum_list)
 
-        -- storageSystemHandleRequests(bridge, storage, others_list)
+        storageSystemHandleRequests(bridge, storage, others_list)
     end
 
     return equipment_list, builder_list, domum_list, others_list

@@ -44,7 +44,7 @@ function colonyCategorizeRequests(colony, storage, requests)
         local item_displayName = trimLeadingWhitespace(req.items[1].displayName or name_from_req) --> [Oak Door] [Paper]
         local item_name_raw = req.items[1].name or "" --> minecraft:oak_door
         local itemIsEquipment = isEquipment(desc) --> boolean
-        local nbtToStore = req.items[1].nbt --> so far nil..
+        local nbtToStore = req.items[1].nbt --> so far nil even for domum_list nbt needed...
         local fingerprintToStore = req.items[1].fingerprint --> -3452345235432
         local formattedName = name_from_req --> Chestplate, 1 Oak Door, 16 Mutton Dinner
         local isDomumOrnamentumItem = string.find(item_name_raw, "domum_ornamentum:", 1, true) == 1 --> boolean
@@ -57,7 +57,18 @@ function colonyCategorizeRequests(colony, storage, requests)
                 
             end
         end
-        
+        -- rednet.send(5, item_name_raw, "spec2" )
+        -- rednet.send(5, nbtToStore, "spec1" )
+        -- rednet.send(5, isDomumOrnamentumItem, "spec3" )
+        -- os.sleep(1)
+-- NBT from Integrated Dynamics for a domum shingles
+--         {
+--     "domum_ornamentum:texture_data": {
+--         "minecraft:block/clay": "domum_ornamentum:brick_extra",
+--         "minecraft:block/oak_planks": "minecraft:spruce_planks"
+--     }
+-- }
+
         local itemEntry = {
             id = requestId,
             name = formattedName, 
@@ -83,41 +94,49 @@ function colonyCategorizeRequests(colony, storage, requests)
         if string.find(target, "Builder", 1, true) then
             if isDomumOrnamentumItem then
                 local blockType = removeNamespace(item_name_raw, ":")
-                local textureData = nbtToStore["textureData"]
-                local textureDataSize = 0
-                if type(textureData) == "table" then
-                    for _ in pairs(textureData) do textureDataSize = textureDataSize + 1 end
-                end
-                if textureDataSize == 1 and nbtToStore and nbtToStore.type then
-                    local singleMaterial = "UnknownMaterial"
-                    if type(textureData) == "table" then 
-                        for _, mat_val in pairs(textureData) do 
-                            singleMaterial = removeNamespace(tostring(mat_val), ":");
-                            break
-                         end
-                    local style = tostring(nbtToStore.type):gsub("_", " ") :gsub("^%l", string.upper):gsub("%s%l", function(c) return string.upper(c) end)
-                    itemEntry.name = string.format("%s (%s, %s)", item_displayName, style, singleMaterial)
-                end
-                elseif textureDataSize == 2 and nbtToStore then
-                    local materialsExtracted = {}
+                if nbtToStore then
+                    -- rednet.send(5,nbtToStore, "spec1")
+                    local textureData = nbtToStore["textureData"]
+                    local textureDataSize = 0
                     if type(textureData) == "table" then
-                        local matKeys = {}
-                        for matkey in pairs(textureData) do table.insert(matKeys, matkey) end
-                        if matKeys[1] then table.insert(materialsExtracted, removeNamespace(tostring(textureData[matKeys[1]])), ":") end
-                        if matKeys[2] then table.insert(materialsExtracted, removeNamespace(tostring(textureData[matKeys[2]])), ":") end
+                        for _ in pairs(textureData) do textureDataSize = textureDataSize + 1 end
                     end
-                    if #materialsExtracted == 2 then
-                        itemEntry.name = string.format("%s (%s, %s, %s)", item_displayName, blockType, materialsExtracted[1], materialsExtracted[2] )
-                    else
-                        itemEntry.name = string.format("%s (%s, MaterialsErr)", item_displayName, blockType)
-                        logToFile("Domum 2-mat block " .. item_displayName .. " issue extracting 2 materials.", "WARN_")
+                    if textureDataSize == 1 and nbtToStore and nbtToStore.type then
+                        local singleMaterial = "UnknownMaterial"
+                        if type(textureData) == "table" then 
+                            for _, mat_val in pairs(textureData) do 
+                                singleMaterial = removeNamespace(tostring(mat_val), ":");
+                                break
+                            end
+                        local style = tostring(nbtToStore.type):gsub("_", " ") :gsub("^%l", string.upper):gsub("%s%l", function(c) return string.upper(c) end)
+                        itemEntry.name = string.format("%s (%s, %s)", item_displayName, style, singleMaterial)
+                        
+                        
+                    elseif textureDataSize == 2 and nbtToStore then
+                        local materialsExtracted = {}
+                        if type(textureData) == "table" then
+                            local matKeys = {}
+                            for matkey in pairs(textureData) do table.insert(matKeys, matkey) end
+                            if matKeys[1] then table.insert(materialsExtracted, removeNamespace(tostring(textureData[matKeys[1]])), ":") end
+                            if matKeys[2] then table.insert(materialsExtracted, removeNamespace(tostring(textureData[matKeys[2]])), ":") end
+                        end
+                        if #materialsExtracted == 2 then
+                            itemEntry.name = string.format("%s (%s, %s, %s)", item_displayName, blockType, materialsExtracted[1], materialsExtracted[2] )
+                        else
+                            itemEntry.name = string.format("%s (%s, MaterialsErr)", item_displayName, blockType)
+                            logToFile("Domum 2-mat block " .. item_displayName .. " issue extracting 2 materials.", "WARN_")
+                        end
                     end
+                
                 else
                     itemEntry.name = string.format("%s (%s, NBT_Err)", item_displayName, blockType) 
                     logToFile("Unhandled Domum block: " .. item_displayName .. " textureDataSize: " .. textureDataSize .. " NBT: " .. tableToString(nbtToStore or {}), "WARN_")
 
-                end  
+                    end 
+                end
+                 
                 table.insert(domum_list, itemEntry)
+                rednet.send(5,domum_list, "spec1")
             else
                 itemEntry.name = name_from_req 
                 table.insert(builder_list, itemEntry)

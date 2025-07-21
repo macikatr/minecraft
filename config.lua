@@ -126,41 +126,41 @@ function monitorDashboardRequests(monitor, equipment_list, builder_list, domum_l
     end
     --Domum
     monitorPrintText(monitor, math.ceil(builder_count / 2) + 7, "center", "Domum", colors.orange)
-    local half = math.ceil(builder_count / 2)
+    local half = math.ceil(domum_count / 2)
 
     for i = 1, half do
         local item = domum_list[i]
         if item then
-            monitorPrintText(monitor, i + 5, "left", (item.provided .. "/" .. item.name), item.displayColor)
+            monitorPrintText(monitor, math.ceil(builder_count / 2) + i + 7, "left", (item.provided .. "/" .. item.name), item.displayColor)
         end
     end
 
-    for i = half + 1, builder_count do
-        local item = builder_list[i]
+    for i = half + 1, domum_count do
+        local item = domum_list[i]
         if item then
-            monitorPrintText(monitor, i - half + 5, "right", (item.provided .. "/" .. item.name),
+            monitorPrintText(monitor, math.ceil( builder_count / 2) + i - half + 7, "right", (item.provided .. "/" .. item.name),
                 item.displayColor)
         end
     end
 
 
     --Equipment
-    monitorPrintText(monitor,domum_count + math.ceil(builder_count / 2) + 9, "center", "Equipment", colors.orange)
+    monitorPrintText(monitor, math.ceil(builder_count + domum_count / 2) + 8, "center", "Equipment", colors.orange)
     if equipment_list then
         for i, item in pairs(equipment_list) do
-        monitorPrintText(monitor, domum_count + math.ceil(builder_count / 2) + i + 9, "left", item.name, item.displayColor)
-        monitorPrintText(monitor, domum_count + math.ceil(builder_count / 2) + i + 9, "right", item.target, colors.lightGray)
+        monitorPrintText(monitor, math.ceil(builder_count + domum_count / 2) + i + 8, "left", item.name, item.displayColor)
+        monitorPrintText(monitor, math.ceil(builder_count + domum_count / 2) + i + 8, "right", item.target, colors.lightGray)
         end
     end
 
 
     --Others
-    monitorPrintText(monitor, domum_count + equipment_count + math.ceil(builder_count / 2) + 11, "center", "Other", colors.orange)
+    monitorPrintText(monitor,  math.ceil(domum_count + equipment_count + builder_count / 2) + 10, "center", "Other", colors.orange)
     for i, item in pairs(others_list) do
-        monitorPrintText(monitor, i + domum_count + equipment_count + math.ceil(builder_count / 2) + 11, "left",
+        monitorPrintText(monitor, i +  math.ceil(domum_count + equipment_count + builder_count / 2) + 11, "left",
             (item.provided .. "/" .. item.name),
             item.displayColor)
-        monitorPrintText(monitor, i + domum_count + equipment_count + math.ceil(builder_count / 2) + 11, "right", item.target, colors.lightGray)
+        monitorPrintText(monitor, i +  math.ceil(domum_count + equipment_count + builder_count / 2) + 11, "right", item.target, colors.lightGray)
     end
 end
 
