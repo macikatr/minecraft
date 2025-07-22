@@ -2,15 +2,15 @@
 -- If true, Advanced Computer will show all Log information. Default: false
 local bShowInGameLog = false
 
-local bDisableLog = false
+local enableLog = true
 
 
 -- Name of the log file e.g. "logFileName"_log.txt
-local logFileName = "LC"
+local logFileName = "MC"
 
 
 function logToFile(message, level, bPrint)
-    if not bDisableLog then
+    if enableLog then
         level = level or "INFO_"
         bPrint = bPrint or bShowInGameLog
 
@@ -114,60 +114,9 @@ function safeCall(func, ...)
         logToFile((result or "Unknown error"), "ERROR")
         return false
     end
-    return true
+    return result
 end
 
-
-----------------------------------------------------------------------------
---* DEBUG FUNCTIONS
-----------------------------------------------------------------------------
-
-function debugDiskSpace()
-    local free = fs.getFreeSpace("/")
-    print("Free disk space:", free, "bytes")
-
-    for _, f in ipairs(fs.list("/")) do
-        local path = "/" .. f
-        if not fs.isDir(path) then
-            print(path, fs.getSize(path))
-        end
-    end
-end
-
-function debugPrintTableToLog(t, logFile, indent)
-    indent = indent or 0
-    local prefix = string.rep("  ", indent)
-
-    for key, value in pairs(t) do
-        if type(value) == "table" then
-            logFile:write(prefix .. tostring(key) .. ":\n")
-            debugPrintTableToLog(value, logFile, indent + 1)
-        else
-            logFile:write(prefix .. tostring(key) .. ": " .. tostring(value) .. "\n")
-        end
-    end
-end
-
-function debugTableTest()
-    local logFile = io.open("M_log.txt", "w")
-    if not logFile then
-        error("Could not open log file for writing")
-    end
-
-
-    local success, result = pcall(function()
-        local requests = peripheral.find("colony_integrator").getRequests()
-        debugPrintTableToLog(requests, logFile)
-    end)
-
-    if not success then
-        logFile:write("Error: " .. tostring(result) .. "\n")
-    end
-
-    logFile:close()
-
-    print(result or "Table logged successfully")
-end
 
 
 ----------------------------------------------------------------------------

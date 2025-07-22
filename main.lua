@@ -1,5 +1,5 @@
 
-local VERSION = 1.21
+local VERSION = 1.22
 local debug = false
 local crafting_enabled = true -- toggle for auto crafting of requests
 local ign = "Macika"
@@ -16,12 +16,10 @@ local rainbowColors = config.rainbowColors
 local helpers = require "helpers"
 local getPeripheral = helpers.getPeripheral
 local logToFile = helpers.logToFile
-local writeToLogFile = helpers.writeToLogFile
 local removeNameSpace = helpers.removeNamespace
 local getStorageBridge = helpers.getStorageBridge
 local autodetectStorage = helpers.autodetectStorage
 local checkMonitorSize = helpers.checkMonitorSize
-local safeCall = helpers.safeCall
 
 local crafting = require "crafting"
 local colonyCategorizeRequests = crafting.colonyCategorizeRequests
@@ -515,12 +513,6 @@ function main()
          
         checkAllPeripheral()
         
-        -- debugTableTest()
-        -- sleep(2)
-
-        -- debugDiskSpace()
-
-
         termShowLog()
 
         term.setCursorPos(1, 5)
