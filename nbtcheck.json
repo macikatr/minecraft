@@ -1,6 +1,0 @@
-{
-    "domum_ornamentum:texture_data": {
-        "minecraft:block/clay": "domum_ornamentum:brick_extra",
-        "minecraft:block/oak_planks": "minecraft:spruce_planks"
-    }
-}
