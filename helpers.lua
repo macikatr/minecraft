@@ -269,14 +269,18 @@ function getStorageBridge()
 end
 
 function autodetectStorage()
+    chest_options = {"minecraft:chest", "dimstorage:dimensional_chest", "enderstorage:ender_chest", "minecraft:ender_chest"}
+    for i in ipairs(chest_options) do
+        
+        local chest = peripheral.find(chest_options[i])
 
-    local chest = peripheral.find("minecraft:chest")
+            if chest then 
+                logToFile("Storage detected")
 
-    if chest then 
-        logToFile("Storage detected")
-
-            return chest
-    end
+                    return chest
+                    
+            end
+     end
     -- for _, side in pairs(peripheral.getNames()) do
     --     if peripheral.hasType(side, "inventory") then
     --         -- logToFile("Storage detected on " .. side)
