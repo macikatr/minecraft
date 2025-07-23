@@ -367,6 +367,7 @@ function detectQuantityFieldOnce(bridge, itemName, nbtTable, fingerprint)
 end
 
 
+
 return {    logToFile = logToFile, 
             writeToLogFile = writeToLogFile,
             tableToString = tableToString,

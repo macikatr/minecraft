@@ -270,11 +270,42 @@ function monitorShowDashboard(monitor, equipment_list, builder_list, domum_list,
     monitorDashboardName(monitor)
 end
 
+function displayTimer(mon, t)
+    local w, h = mon.getSize()
+    now = os.time()
+    cycle = "day"
+    cycle_color = colors.orange
+    if now >= 4 and now < 6 then
+        cycle = "sunrise"
+        cycle_color = colors.yellow
+    elseif now >= 6 and now < 18 then
+        cycle = "day"
+        cycle_color = colors.lightBlue
+    elseif now >= 18 and now < 19.5 then
+        cycle = "sunset"
+        cycle_color = colors.magenta
+    elseif now >= 19.5 or now < 5 then
+        cycle = "night"
+        cycle_color = colors.red
+    end
+ 
+    timer_color = colors.green
+    if t < 15 then timer_color = colors.yellow end
+    if t < 5 then timer_color = colors.orange end
+ 
+    monitorPrintText(mon, h-1, "left", string.format("Time: %s [%s]    ", textutils.formatTime(now, false), cycle), cycle_color)
+    if cycle ~= "night" then 
+      monitorPrintText(mon, h-1, "right", string.format("    Remaining: %ss", t), timer_color)
+    else 
+      monitorPrintText(mon, h-1, "right", "    Remaining: PAUSED", colors.red)
+    end
+end
 
 return { resetDefault = resetDefault, 
         drawLoadingBar = drawLoadingBar, 
         monitorPrintText = monitorPrintText,   
         drawBox = drawBox, 
         monitorShowDashboard = monitorShowDashboard,
-        rainbowColors = rainbowColors    
+        rainbowColors = rainbowColors,
+        displayTimer = displayTimer
     }

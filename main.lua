@@ -12,6 +12,7 @@ local drawLoadingBar = config.drawLoadingBar
 local monitorShowDashboard = config.monitorShowDashboard
 local monitorPrintText = config.monitorPrintText
 local rainbowColors = config.rainbowColors
+local displayTimer = config.displayTimer
 
 local helpers = require "helpers"
 local getPeripheral = helpers.getPeripheral
@@ -36,8 +37,10 @@ rednet.open("top")
 local monitors = { peripheral.find("monitor") }
 mon1 = monitors[1]
 mon2 = monitors[2]
+mon3 = monitors[3]
 mon1.clear()
 mon2.clear()
+mon3.clear()
 local colony
 local bridge
 local storage
@@ -366,7 +369,7 @@ function printCitizens()
     local x, y = mon1.getSize()
     local citizens = colony.getCitizens()
 
-    drawBox(mon1, 2, x - 1, 3, ( math.ceil(#citizens / 2)) + 13, "CITIZENS", colors.gray,
+    drawBox(mon1, 2, x - 1, 3, ( math.ceil(#citizens)) + 2, "CITIZENS", colors.gray,
         colors.purple)
 
      --Citizens
@@ -419,15 +422,15 @@ function summary(mon)
     mon.setTextScale(0.5)
 
     local text_Divider = "-------------------------------------------------------"
-    mon1.setCursorPos(2, cury)
+    mon.setCursorPos(2, cury)
 
-    mon1.write(text_Divider)
+    mon.write(text_Divider)
 
     local text_Requirements = "\187 Summary \171"
-    mon1.setCursorPos(2, cury+2)
-    mon1.setTextColor(colors.orange)
+    mon.setCursorPos(2, cury+2)
+    mon.setTextColor(colors.orange)
 
-    mon1.write(text_Requirements)
+    mon.write(text_Requirements)
 
     mon.setCursorPos(2, cury+4)
     mon.write("Building Sites: ".. colony.amountOfConstructionSites())
@@ -451,6 +454,7 @@ function summary(mon)
     mon.write("Overall happiness: ".. math.floor(colony.getHappiness()))
     mon.setCursorPos(2, cury+9)
     mon.write("Amount of graves: ".. colony.amountOfGraves())
+    
        
 end
 
@@ -507,10 +511,47 @@ function main()
     checkAllPeripheral()
 
     monitorLoadingAnimation(mon2)
-
+    local time_between_runs = 5
+    local current_run = time_between_runs
+    
+    displayTimer(mon1, current_run)
+    local TIMER = os.startTimer(1)
 
     while true do
-         
+        local e = {os.pullEvent()}
+        if e[1] == "timer" and e[2] == TIMER then
+            now = os.time()
+            if now >= 5 and now < 19.5 then
+            current_run = current_run - 1
+            if current_run <= 0 then
+                mon3.clear()
+                mon3.setCursorPos(2,2)
+                checkAllPeripheral()
+        
+                termShowLog()
+
+                term.setCursorPos(1, 5)
+
+                
+                printCitizens()
+                
+                summary(mon3)
+             
+
+                local equipment_list, builder_list, domum_list, others_list = requestAndFulfill()
+
+                monitorShowDashboard(mon2, equipment_list, builder_list, domum_list, others_list)
+
+
+
+                current_run = time_between_runs
+      end
+    end
+        displayTimer(mon1, current_run)
+        TIMER = os.startTimer(1)
+    elseif e[1] == "monitor_touch" then
+        os.cancelTimer(TIMER)
+        
         checkAllPeripheral()
         
         termShowLog()
@@ -520,17 +561,20 @@ function main()
         
         printCitizens()
         
-        summary(mon1)
-        sleep(5)
-
-
-
+        summary(mon3)
         
-
+        
 
         local equipment_list, builder_list, domum_list, others_list = requestAndFulfill()
 
         monitorShowDashboard(mon2, equipment_list, builder_list, domum_list, others_list)
+
+        current_run = time_between_runs
+        displayTimer(mon1, current_run)
+        TIMER = os.startTimer(1)
+    end
+         
+        
     end
  
 end
