@@ -369,7 +369,7 @@ function printCitizens()
     local x, y = mon1.getSize()
     local citizens = colony.getCitizens()
 
-    drawBox(mon1, 2, x - 1, 3, ( math.ceil(#citizens)) + 2, "CITIZENS", colors.gray,
+    drawBox(mon1, 2, x - 1, 3, ( math.ceil(#citizens)) + 8, "CITIZENS", colors.gray,
         colors.purple)
 
      --Citizens
@@ -417,8 +417,10 @@ end
 
 
 function summary(mon)
-    curx, cury = mon.getCursorPos()
-    cury = cury +6
+    -- curx, cury = mon.getCursorPos()
+    -- cury = cury +6
+    cury=2
+    mon.clear()
     mon.setTextScale(0.5)
 
     local text_Divider = "-------------------------------------------------------"
@@ -501,6 +503,7 @@ end
 
 
 
+
 ----------------------------------------------------------------------------
 --* MAIN
 ----------------------------------------------------------------------------
@@ -511,72 +514,60 @@ function main()
     checkAllPeripheral()
 
     monitorLoadingAnimation(mon2)
-    local time_between_runs = 5
-    local current_run = time_between_runs
+    local loopInterval = 5
+    local loopCounter = loopInterval
     
-    displayTimer(mon1, current_run)
-    local TIMER = os.startTimer(1)
-
+    displayTimer(mon1, loopCounter)
+    
     while true do
-        local e = {os.pullEvent()}
-        if e[1] == "timer" and e[2] == TIMER then
-            now = os.time()
-            if now >= 5 and now < 19.5 then
-            current_run = current_run - 1
-            if current_run <= 0 then
-                mon3.clear()
-                mon3.setCursorPos(2,2)
-                checkAllPeripheral()
+        --  displayTimer(mon1, loopCounter)       
+        local now = os.time()
         
-                termShowLog()
+        while now >= 5 and now < 19.5 do
+                loopCounter = loopCounter - 1
+                displayTimer(mon1, loopCounter) 
+                os.sleep(1)
+                if loopCounter <= 0 then
+                                        
+                    checkAllPeripheral()
+            
+                    termShowLog()
 
-                term.setCursorPos(1, 5)
+                    term.setCursorPos(1, 5)
 
+                    
+                    printCitizens()
+                    
+                    summary(mon3)
                 
-                printCitizens()
-                
-                summary(mon3)
-             
 
-                local equipment_list, builder_list, domum_list, others_list = requestAndFulfill()
+                    local equipment_list, builder_list, domum_list, others_list = requestAndFulfill()
 
-                monitorShowDashboard(mon2, equipment_list, builder_list, domum_list, others_list)
+                    monitorShowDashboard(mon2, equipment_list, builder_list, domum_list, others_list)
 
 
 
-                current_run = time_between_runs
-      end
-    end
-        displayTimer(mon1, current_run)
-        TIMER = os.startTimer(1)
-    elseif e[1] == "monitor_touch" then
-        os.cancelTimer(TIMER)
+                    loopCounter = loopInterval
+                end
+            
         
-        checkAllPeripheral()
-        
-        termShowLog()
-
-        term.setCursorPos(1, 5)
-
-        
-        printCitizens()
-        
-        summary(mon3)
-        
-        
-
-        local equipment_list, builder_list, domum_list, others_list = requestAndFulfill()
-
-        monitorShowDashboard(mon2, equipment_list, builder_list, domum_list, others_list)
-
-        current_run = time_between_runs
-        displayTimer(mon1, current_run)
-        TIMER = os.startTimer(1)
-    end
-         
+            
+            
+        end
+        while now >= 19.5 or now < 5 do
+            
+            
+            displayTimer(mon1, loopCounter)
+            summary(mon3)
+            sleep(1)
+            
+           
+            
+            
+        end
         
     end
- 
+    
 end
 
 if not debug or colony.isInColony() then

@@ -295,9 +295,9 @@ function displayTimer(mon, t)
  
     monitorPrintText(mon, h-1, "left", string.format("Time: %s [%s]    ", textutils.formatTime(now, false), cycle), cycle_color)
     if cycle ~= "night" then 
-      monitorPrintText(mon, h-1, "right", string.format("    Remaining: %ss", t), timer_color)
+    monitorPrintText(mon, h-1, "right", string.format("    Remaining: %ss", t), timer_color)
     else 
-      monitorPrintText(mon, h-1, "right", "    Remaining: PAUSED", colors.red)
+    monitorPrintText(mon, h-1, "right", "    Remaining: PAUSED", colors.red)
     end
 end
 
